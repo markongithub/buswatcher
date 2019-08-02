@@ -19,7 +19,7 @@ class RouteScan:
 
     def __init__(self, system_map):
 
-        self.source = 'nj'
+        self.source = 'centro'
 
         # create database connection
         self.db = SQLAlchemyDBConnection()
@@ -39,7 +39,7 @@ class RouteScan:
     def fetch_positions(self):
 
         try:
-            self.buses = NJTransitAPI.parse_xml_getBusesForRouteAll(NJTransitAPI.get_xml_data('nj', 'all_buses'))
+            self.buses = NJTransitAPI.parse_xml_getBusesForRouteAll(NJTransitAPI.get_xml_data('centro', 'all_buses'))
             route_count = len(list(set([v.rt for v in self.buses])))
             print('\rfetched ' + str(len(self.buses)) + ' buses on ' + str(route_count) + ' routes...')
             # self.clean_buses()
@@ -60,7 +60,7 @@ class RouteScan:
 
                 try:
                     if result is None:
-                        trip_id = Trip('nj', system_map, bus.rt, bus.id, bus.run, bus.pd, bus.pid)
+                        trip_id = Trip('centro', system_map, bus.rt, bus.id, bus.run, bus.pd, bus.pid)
                         db.session.add(trip_id)
                     else:
                         continue

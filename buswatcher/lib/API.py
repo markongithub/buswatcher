@@ -92,7 +92,7 @@ def __positions2geojson(df): # future: optimization, less pandas, 0.2 seconds pe
 
 
 def _fetch_positions_df(route): # future: optimization, less pandas? (each route takes 0.1 to 0.2 seconds, kills the statewide map... maybe process that with its own process on a single buses_all df)
-    positions = NJTransitAPI.parse_xml_getBusesForRoute(NJTransitAPI.get_xml_data('nj', 'buses_for_route', route=route))
+    positions = NJTransitAPI.parse_xml_getBusesForRoute(NJTransitAPI.get_xml_data('centro', 'buses_for_route', route=route))
     labels = ['bid', 'lon', 'lat', 'run', 'op', 'dn', 'pid', 'dip', 'id', 'fs', 'pd']
     positions_log=pd.DataFrame(columns=labels)
     for bus in positions:

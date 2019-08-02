@@ -7,7 +7,7 @@ import geojson
 # API like: https://github.com/harperreed/transitapi/wiki/Unofficial-Bustracker-API
 
 _sources = {
-  'nj': 'http://mybusnow.njtransit.com/bustime/map/'
+  'centro': 'http://bus-time.centro.org/bustime/map/'
 }
 
 _api = {
@@ -176,11 +176,14 @@ def parse_xml_getBusesForRoute(data):
     return clean_buses(results)
 
 
+allow_nonnumeric_routes = True
+
 def clean_buses(buses):
+    print('we entered clean_buses with ' + str(len(buses)))
     buses_clean = []
     for bus in buses:
         if bus.run.isdigit() is True:  # removes any buses with non-number run id, and this should populate throughout the whole project
-            if bus.rt.isdigit() is True:  # removes any buses with non-number route id, and this should populate throughout the whole project
+            if allow_nonnumeric_routes or bus.rt.isdigit():  # removes any buses with non-number route id, and this should populate throughout the whole project
                 buses_clean.append(bus)
 
     return buses_clean
@@ -279,7 +282,9 @@ def get_xml_data(source, function, **kwargs):
     tries = 1
     while True:
         try:
-            data = urllib.request.urlopen(_gen_command(source, function, **kwargs)).read()
+            url = _gen_command(source, function, **kwargs)
+            print('Trying to retrieve ' + url)
+            data = urllib.request.urlopen(url).read()
             if data:
                 break
         except: # future more graceful failure from longer disconnects -- perhaps a timeout?

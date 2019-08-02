@@ -83,7 +83,7 @@ class Trip(Base):
 
     trip_id = Column(String(127), primary_key=True, index=True, unique=True)
     source = Column(String(8))
-    rt = Column(Integer())
+    rt = Column(String(16))
     v = Column(Integer())
     run = Column(String(8))
     pd = Column(String(127))

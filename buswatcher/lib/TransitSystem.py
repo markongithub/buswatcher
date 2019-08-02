@@ -74,7 +74,7 @@ class SystemMap:
 
         except: #  if missing download and load
                 print ('fetching xmldata for '+route)
-                route_xml = NJTransitAPI.get_xml_data('nj', 'routes', route=route)
+                route_xml = NJTransitAPI.get_xml_data('centro', 'routes', route=route)
                 outfile = (get_config_path() + 'route_geometry/' + route + '.xml')
                 with open(outfile, 'wb') as f:  # overwrite existing file
                     f.write(route_xml)

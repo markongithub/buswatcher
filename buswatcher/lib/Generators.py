@@ -80,7 +80,7 @@ class RouteUpdater():
             # 2. grab current buses list and see if there's any route #s we don't know yet
 
             # get list of active routes
-            buses = parse_xml_getBusesForRouteAll(get_xml_data('nj', 'all_buses'))
+            buses = parse_xml_getBusesForRouteAll(get_xml_data('centro', 'all_buses'))
             routelist_from_api_active = [b.rt for b in buses]
             # remove any bus not on a numeric route
             routes_active = list()
@@ -104,7 +104,7 @@ class RouteUpdater():
                 update = {"route": new_route, "nm": '', "ttl": "1d",
                           "description_long": "", "description_short": "", "frequency": "low",
                           "prettyname": "",
-                          "schedule_url": "https://www.njtransit.com/sf/sf_servlet.srv?hdnPageAction=BusTo"}
+                          "schedule_url": "not now"}
                 system_map.route_descriptions['routedata'].append(update)
 
             # 4. fetch route xml metadata from NJT API
@@ -114,7 +114,7 @@ class RouteUpdater():
                 try:
 
                     # fetch data
-                    xml_data = get_xml_data('nj', 'routes', route=r)
+                    xml_data = get_xml_data('centro', 'routes', route=r)
 
                     #dump it to disk
                     if expired == True: # but only if the files are older than the ttl
