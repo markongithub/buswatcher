@@ -55,6 +55,8 @@ class RouteScan:
             # PARSE trips, create missing trip records first, to honor foreign key constraints
             for bus in self.buses:
                 bus.trip_id = ('{id}_{run}_{dt}').format(id=bus.id, run=bus.run, dt=datetime.datetime.today().strftime('%Y%m%d'))  # todo add route to trip id, so its rt_v_run_date?
+                if not system_map.route_in_route_descriptions(bus.rt):
+                    continue
                 self.trip_list.append(bus.trip_id)
                 result = db.session.query(Trip).filter(Trip.trip_id == bus.trip_id).first()
 
@@ -65,8 +67,9 @@ class RouteScan:
                     else:
                         continue
                 except:
-                    print("couldn't find route in route_descriptions.json, please add it. route " + str(
-                        bus.rt))  # future automatically add unknown routes to route_descriptions.json
+                    # print("couldn't find route in route_descriptions.json, please add it. route " + str(
+                    #    bus.rt))  # future automatically add unknown routes to route_descriptions.json
+                    pass
 
                 db.__relax__()  # disable foreign key checks before...
                 try:
@@ -128,6 +131,7 @@ class RouteScan:
                     .order_by(BusPosition.timestamp.asc()) \
                     .all()
 
+                print('arrival candidates: {a}'.format(a=list(map(lambda s: s.stop_name, arrival_candidates))))
                 # split them into groups by stop
                 position_groups = [list(g) for key, g in itertools.groupby(arrival_candidates, lambda x: x.stop_id)]
 
@@ -273,6 +277,7 @@ class RouteScan:
         # grab a trip
         for trip_id in self.trip_list:
 
+            print ('considering trip ID #{a}...'.format(a=trip_id))
             with self.db as db:
                 trip_card = db.session.query(ScheduledStop) \
                     .join(Trip) \
@@ -288,13 +293,13 @@ class RouteScan:
 
                 # deal with common situations to skip the CPU intensive stuff
                 if num_arrivals == 0:
-                    # print('\t\tdoesnt have any arrivals logged yet')
+                    print('\t\tdoesnt have any arrivals logged yet')
                     continue # back to loop start
                 elif num_arrivals == 1:
-                    # print('\t\thas 1 arrival, so no intervals yet to interpolate')
+                    print('\t\thas 1 arrival, so no intervals yet to interpolate')
                     continue # back to loop start
                 elif num_arrivals == len (trip_card):
-                    # print('\t\tdoesnt have any missed stops')
+                    print('\t\tdoesnt have any missed stops')
                     continue # back to loop start
 
                 # MAIN SCAN LOOP
@@ -306,17 +311,21 @@ class RouteScan:
 
                 # go through the scheduled_stops
                 for scheduled_stop in trip_card:
+                    print('\tconsidering stop {a} with in_interval {b}...'.format(a=scheduled_stop.stop_name,b=str(in_interval)))
                     # find an arrival
                     if scheduled_stop.arrival_timestamp:
+                        print ('\tit has an arrival timestamp (from the DB I guess)')
                         if in_interval == False:
-                            # print('\tstarting interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_id,b=scheduled_stop.arrival_timestamp))
+                            print('\tstarting interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
                             interval_stops = []
                             interval_stops.append(scheduled_stop) # these should be pointers to the object, not copies
+                            print('\tso interval_stops is now {a}'.format(a=list(map(lambda s: s.stop_name,interval_stops))))
                             in_interval = True
                             continue
                         elif in_interval == True:
-                            # print('\tending interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_id,b=scheduled_stop.arrival_timestamp))
+                            print('\tending interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
                             interval_stops.append(scheduled_stop)
+                            print('\tso the final interval_stops is {a}'.format(a=list(map(lambda s: s.stop_name,interval_stops))))
                             # dict_insert[interval_stops[0].stop_id]=interval_stops
                             all_this_trips_intervals[interval_stops[0].stop_id] = interval_stops # create a dict entry with k of first stop_id, v of list of stop instances
                             # reinit
@@ -325,10 +334,11 @@ class RouteScan:
                             # dict_insert={}
                             continue
                     elif scheduled_stop.arrival_timestamp is None:
+                        print ('\tit does NOT have an arrival timestamp')
                         if in_interval == False:
                             continue
                         elif in_interval == True:
-                            # print('\t\tno timestamp for stop {a}'.format(a=scheduled_stop.stop_id))
+                            print('\t\tno timestamp for stop {a}'.format(a=scheduled_stop.stop_name))
                             interval_stops.append(scheduled_stop)
                             continue
                     else:
@@ -346,7 +356,7 @@ class RouteScan:
                     end_time = interval_sequence[-1].arrival_timestamp
                     interval_length = (len(interval_sequence) - 1)
                     average_time_between_stops = (end_time - start_time) / interval_length
-                    print('\tinterval starts at {a} ends at {b} has {c} gaps averaging {d} seconds'.format(a=interval_sequence[0].stop_id, b= interval_sequence[-1].stop_id, c=interval_length, d=average_time_between_stops))
+                    print('\tinterval starts at {a} ends at {b} has {c} gaps averaging {d} seconds'.format(a=interval_sequence[0].stop_name, b= interval_sequence[-1].stop_name, c=interval_length, d=average_time_between_stops))
 
                     # update the ScheduledStop objects
                     n = 1
@@ -355,7 +365,7 @@ class RouteScan:
                         interval_sequence[x].arrival_timestamp = start_time + adder
                         interval_sequence[x].interpolated_arrival_flag = True
                         n += 1
-                        print('\t\tarrival_timestamp added to ScheduledStop instance for stop {a}\t{b}\tincrement {c}'.format(a=interval_sequence[x].stop_id, b=interval_sequence[x].arrival_timestamp, c=adder))
+                        print('\t\tarrival_timestamp added to ScheduledStop instance for stop {a}\t{b}\tincrement {c}'.format(a=interval_sequence[x].stop_name, b=interval_sequence[x].arrival_timestamp, c=adder))
 
                 # when we are done with this trip, write to the db
                 db.session.commit()
@@ -481,7 +491,7 @@ def get_nearest_stop(system_map, buses, route):
         stoplist = system_map.get_single_route_stoplist_for_localizer(route)
     except:
         # future automatically add unknown routes to route_descriptions.json
-        print("couldn't find route in route_descriptions.json, please add it. route " + str(route))
+        # print("couldn't find route in route_descriptions.json, please add it. route " + str(route))
         return
 
     result = collections.defaultdict(list)

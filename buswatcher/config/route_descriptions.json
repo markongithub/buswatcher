@@ -1,12 +1,12 @@
 {
-    "last_updated": "2019-07-21 13:43:07",
+    "last_updated": "2019-08-03 18:13:38",
     "ttl": "86400",
     "routedata": [
         {
             "description_long": "whatever",
             "description_short": "",
             "frequency": "low",
-            "nm": "whatever nm",
+            "nm": "Street",
             "prettyname": "pretty whatever",
             "route": "SY20",
             "schedule_url": "https://www.centro.org/service_schedules/schedules-syracuse"

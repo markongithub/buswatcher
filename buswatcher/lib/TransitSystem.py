@@ -91,6 +91,9 @@ class SystemMap:
             except:
                 pass
 
+    def route_in_route_descriptions(self, route):
+        return (route in self.route_geometries)
+
     def get_single_route_paths_and_coordinatebundle(self, route):
         routes = self.route_geometries[route]['paths']
         coordinates_bundle = self.route_geometries[route]['coordinate_bundle']
