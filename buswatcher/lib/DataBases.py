@@ -64,8 +64,12 @@ class Trip(Base):
             routes, self.coordinates_bundle = system_map.get_single_route_paths_and_coordinatebundle(self.rt)
 
             self.routename = routes[0].nm
+            print("Looking for path {path} in the route description.".format(path=self.pid))
+            path_found = False
             for path in routes[0].paths:
                 if path.id == self.pid:
+                    path_found = True
+                    print("Adding scheduled stops along path #{path}".format(path=self.pid))
                     for point in path.points:
                         if isinstance(point, NJTransitAPI.Route.Stop):
                             this_stop = ScheduledStop(self.trip_id, self.v, self.run, self.date, point.identity,
@@ -75,6 +79,8 @@ class Trip(Base):
                                 self.db.session.add(this_stop)
                 else:
                     pass
+            if not path_found:
+              print("Uh oh. We didn't find points for this path ID.")
             self.db.__relax__() # relax so we dont trigger the foreign key constraint
             self.db.session.commit()
 

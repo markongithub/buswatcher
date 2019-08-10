@@ -15,6 +15,9 @@ from . import NJTransitAPI
 from .CommonTools import timeit
 # from .TransitSystem import load_system_map
 
+def format_scheduled_stop(s):
+  return getattr(s, 'stop_name', None) or s.stop_id
+
 class RouteScan:
 
     def __init__(self, system_map):
@@ -62,6 +65,7 @@ class RouteScan:
 
                 try:
                     if result is None:
+                        print("Creating a new Trip entry for vehicle {vehicle} on run #{run}".format(vehicle=bus.id, run=bus.run))
                         trip_id = Trip('centro', system_map, bus.rt, bus.id, bus.run, bus.pd, bus.pid)
                         db.session.add(trip_id)
                     else:
@@ -117,6 +121,7 @@ class RouteScan:
             # ASSIGN TO NEAREST STOP
             for trip_id in self.trip_list:
 
+                print('assign_positions: trip {trip_id}'.format(trip_id=trip_id))
                 # load the trip card for reference
                 scheduled_stops = db.session.query(Trip, ScheduledStop) \
                     .join(ScheduledStop) \
@@ -131,9 +136,12 @@ class RouteScan:
                     .order_by(BusPosition.timestamp.asc()) \
                     .all()
 
-                print('arrival candidates: {a}'.format(a=list(map(lambda s: s.stop_name, arrival_candidates))))
+                print('arrival candidates: {a}'.format(a=list(map(format_scheduled_stop, arrival_candidates))))
                 # split them into groups by stop
                 position_groups = [list(g) for key, g in itertools.groupby(arrival_candidates, lambda x: x.stop_id)]
+                print('position_groups: {a}'.format(a=list(
+                    map(lambda l: list(map(format_scheduled_stop, l)),
+                        position_groups))))
 
                 # iterate over all but last one (which is stop bus is currently observed at)
                 for x in range(len(position_groups) - 1):
@@ -272,7 +280,7 @@ class RouteScan:
     def interpolate_missed_stops(self):
         # future optimize option 1 move to generator.quarterly_hour_tasks as a batch job
 
-        print ('starting interpolations for {a} trips...'.format(a=len(self.trip_list)))
+        print ('starting interpolations for the {a} trips in this set of bus positions...'.format(a=len(self.trip_list)))
 
         # grab a trip
         for trip_id in self.trip_list:
