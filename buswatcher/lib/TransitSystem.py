@@ -52,13 +52,17 @@ class SystemMap:
         route_geometries={}
         for rd in self.route_descriptions['routedata']:
             # print('getting route geometry for '+rd['route'])
-            route_geometries[rd['route']]={
-                'route':rd['route'],
-                'xml':self.get_single_route_xml(rd['route']),
-                'paths': self.get_single_route_Paths(rd['route'])[0],
-                'coordinate_bundle': self.get_single_route_Paths(rd['route'])[1]
-            }
+            route = rd['route']
+            route_geometries[route]=self.get_single_route_geometry(route)
         return route_geometries
+
+    def get_single_route_geometry(self, route):
+        return {
+          'route':rd['route'],
+          'xml':self.get_single_route_xml(rd['route']),
+          'paths': self.get_single_route_Paths(rd['route'])[0],
+          'coordinate_bundle': self.get_single_route_Paths(rd['route'])[1]
+        }
 
     def get_routelist(self):
         routelist = (list(set(r['route'] for r in self.route_descriptions['routedata'])))
@@ -67,27 +71,31 @@ class SystemMap:
     def get_single_route_xml(self,route):
 
         try:# load locally
-            infile = (get_config_path() + 'route_geometry/' + route +'.xml')
-            with open(infile,'rb') as f:
-                data = f.read()
-                return data
+            return self.get_cached_route_xml(route)
 
         except: #  if missing download and load
-                print ('fetching xmldata for '+route)
-                route_xml = NJTransitAPI.get_xml_data('centro', 'routes', route=route)
-                outfile = (get_config_path() + 'route_geometry/' + route + '.xml')
-                with open(outfile, 'wb') as f:  # overwrite existing file
-                    f.write(route_xml)
-                infile = (get_config_path() + 'route_geometry/' + route + '.xml')
-                with open(infile, 'rb') as f:
-                    return f.read()
+            return self.download_route_xml(route)
+
+    def download_route_xml(self, route):
+        print ('fetching xmldata for '+route)
+        route_xml = NJTransitAPI.get_xml_data('centro', 'routes', route=route)
+        outfile = (get_config_path() + 'route_geometry/' + route + '.xml')
+        with open(outfile, 'wb') as f:  # overwrite existing file
+            f.write(route_xml)
+        infile = (get_config_path() + 'route_geometry/' + route + '.xml')
+        with open(infile, 'rb') as f:
+            return f.read()
+
+    def get_cached_route_xml(self, route):
+        infile = (get_config_path() + 'route_geometry/' + route + '.xml')
+        with open(infile, 'rb') as f:
+            return(f.read())
 
     def get_single_route_Paths(self, route):
         while True:
             try:
-                infile = (get_config_path() + 'route_geometry/' + route + '.xml')
-                with open(infile, 'rb') as f:
-                    return NJTransitAPI.parse_xml_getRoutePoints(f.read())
+                returnNJTransitAPI.parse_xml_getRoutePoints(
+                        self.get_cached_route_paths(route))
             except:
                 pass
 
