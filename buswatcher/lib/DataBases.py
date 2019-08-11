@@ -61,7 +61,7 @@ class Trip(Base):
 
             self.db = db
             self.stop_list = []
-            routes, self.coordinates_bundle = system_map.get_single_route_paths_and_coordinatebundle(self.rt)
+            routes, self.coordinates_bundle = system_map.get_single_route_paths_and_coordinatebundle(self.rt, self.pid)
 
             self.routename = routes[0].nm
             print("Looking for path {path} in the route description.".format(path=self.pid))
