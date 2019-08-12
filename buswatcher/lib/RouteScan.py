@@ -354,14 +354,12 @@ class RouteScan:
                 # analyze all_the_intervals
                 for stop_id, interval_sequence in all_this_trips_intervals.items():
 
-                    print('trip {a}'.format(a=trip_id))
-
                     start_time = interval_sequence[0].arrival_timestamp
                     end_time = interval_sequence[-1].arrival_timestamp
                     interval_length = (len(interval_sequence) - 1)
                     average_time_between_stops = (end_time - start_time) / interval_length
                     if interval_length > 1:
-                        print('\tinterval starts at {a} ends at {b} has {c} gaps averaging {d} seconds'.format(a=interval_sequence[1].stop_name, b= interval_sequence[-1].stop_name, c=interval_length, d=average_time_between_stops))
+                        print('\t{trip_id} interval starts at {a} ends at {b} has {c} gaps averaging {d} seconds'.format(trip_id=trip_id, a=interval_sequence[1].stop_name, b= interval_sequence[-1].stop_name, c=interval_length, d=average_time_between_stops))
 
                     # update the ScheduledStop objects
                     n = 1
