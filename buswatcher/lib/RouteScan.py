@@ -516,6 +516,12 @@ def get_nearest_stop(system_map, buses, route):
         # create stop geodataframe
 
         for stop_direction in stops_by_direction:
+            # This only works correctly for routes with exactly one path in
+            # each direction. For other routes, it could return a stop that
+            # the bus is not scheduled to visit on this trip.
+            # It might work to globally replace "direction" with "path ID"
+            # in this entire section, but I am more inclined to spend that
+            # effort integrating GTFS instead.
             if bus_direction[0]['dd'] == stop_direction[0]['d']:
 
                 df2 = pd.DataFrame.from_records(stop_direction)
