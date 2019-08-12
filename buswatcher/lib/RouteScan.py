@@ -130,7 +130,7 @@ class RouteScan:
 
                 # select all the BusPositions on ScheduledStops where there is no arrival flag yet
                 query = db.session.query(BusPosition,ScheduledStop) \
-                    .join(ScheduledStop, ScheduledStop.stop_id == BusPosition.stop_id and ScheduledStop.trip_id == BusPosition.trip_id)  \
+                    .join(ScheduledStop, (ScheduledStop.stop_id == BusPosition.stop_id) & (ScheduledStop.trip_id == BusPosition.trip_id))  \
                     .filter(BusPosition.trip_id == trip_id) \
                     .filter(ScheduledStop.arrival_timestamp == None) \
                     .order_by(BusPosition.timestamp.asc())
@@ -316,21 +316,21 @@ class RouteScan:
 
                 # go through the scheduled_stops
                 for scheduled_stop in trip_card:
-                    print('\tconsidering stop {a} with in_interval {b}...'.format(a=scheduled_stop.stop_name,b=str(in_interval)))
+                    # print('\tconsidering stop {a} with in_interval {b}...'.format(a=scheduled_stop.stop_name,b=str(in_interval)))
                     # find an arrival
                     if scheduled_stop.arrival_timestamp:
-                        print ('\tit has an arrival timestamp (from the DB I guess)')
+                        # print ('\tit has an arrival timestamp (from the DB I guess)')
                         if in_interval == False:
-                            print('\tstarting interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
+                            # print('\tstarting interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
                             interval_stops = []
                             interval_stops.append(scheduled_stop) # these should be pointers to the object, not copies
-                            print('\tso interval_stops is now {a}'.format(a=list(map(lambda s: s.stop_name,interval_stops))))
+                            # print('\tso interval_stops is now {a}'.format(a=list(map(lambda s: s.stop_name,interval_stops))))
                             in_interval = True
                             continue
                         elif in_interval == True:
-                            print('\tending interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
+                            # print('\tending interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
                             interval_stops.append(scheduled_stop)
-                            print('\tso the final interval_stops is {a}'.format(a=list(map(lambda s: s.stop_name,interval_stops))))
+                            # print('\tso the final interval_stops is {a}'.format(a=list(map(lambda s: s.stop_name,interval_stops))))
                             # dict_insert[interval_stops[0].stop_id]=interval_stops
                             all_this_trips_intervals[interval_stops[0].stop_id] = interval_stops # create a dict entry with k of first stop_id, v of list of stop instances
                             # reinit
