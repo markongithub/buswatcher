@@ -129,19 +129,16 @@ class RouteScan:
                     .all()
 
                 # select all the BusPositions on ScheduledStops where there is no arrival flag yet
-                arrival_candidates = db.session.query(BusPosition) \
-                    .join(ScheduledStop) \
+                query = db.session.query(BusPosition,ScheduledStop) \
+                    .join(ScheduledStop, ScheduledStop.stop_id == BusPosition.stop_id and ScheduledStop.trip_id == BusPosition.trip_id)  \
                     .filter(BusPosition.trip_id == trip_id) \
                     .filter(ScheduledStop.arrival_timestamp == None) \
-                    .order_by(BusPosition.timestamp.asc()) \
-                    .all()
+                    .order_by(BusPosition.timestamp.asc())
 
-                print('arrival candidates: {a}'.format(a=list(map(format_scheduled_stop, arrival_candidates))))
+                arrival_candidates = query.all()
+                print('arrival candidates: {a}'.format(a=list(map(lambda r: r.ScheduledStop.stop_name, arrival_candidates))))
                 # split them into groups by stop
-                position_groups = [list(g) for key, g in itertools.groupby(arrival_candidates, lambda x: x.stop_id)]
-                print('position_groups: {a}'.format(a=list(
-                    map(lambda l: list(map(format_scheduled_stop, l)),
-                        position_groups))))
+                position_groups = [list(map(lambda r: r.BusPosition, g)) for key, g in itertools.groupby(arrival_candidates, lambda x: x.BusPosition.stop_id)]
 
                 # iterate over all but last one (which is stop bus is currently observed at)
                 for x in range(len(position_groups) - 1):
@@ -342,7 +339,6 @@ class RouteScan:
                             # dict_insert={}
                             continue
                     elif scheduled_stop.arrival_timestamp is None:
-                        print ('\tit does NOT have an arrival timestamp')
                         if in_interval == False:
                             continue
                         elif in_interval == True:
@@ -364,7 +360,8 @@ class RouteScan:
                     end_time = interval_sequence[-1].arrival_timestamp
                     interval_length = (len(interval_sequence) - 1)
                     average_time_between_stops = (end_time - start_time) / interval_length
-                    print('\tinterval starts at {a} ends at {b} has {c} gaps averaging {d} seconds'.format(a=interval_sequence[0].stop_name, b= interval_sequence[-1].stop_name, c=interval_length, d=average_time_between_stops))
+                    if interval_length > 1:
+                        print('\tinterval starts at {a} ends at {b} has {c} gaps averaging {d} seconds'.format(a=interval_sequence[1].stop_name, b= interval_sequence[-1].stop_name, c=interval_length, d=average_time_between_stops))
 
                     # update the ScheduledStop objects
                     n = 1
