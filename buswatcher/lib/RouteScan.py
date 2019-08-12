@@ -18,6 +18,38 @@ from .CommonTools import timeit
 def format_scheduled_stop(s):
   return getattr(s, 'stop_name', None) or s.stop_id
 
+def make_trip_intervals(scheduled_stops, interval_stops, intervals_accu):
+    if not scheduled_stops:
+        return intervals_accu
+
+    scheduled_stop = scheduled_stops[0]
+    remaining_stops = scheduled_stops[1:]
+    # print('\tconsidering stop {a} with in_interval {b}...'.format(a=scheduled_stop.stop_name,b=str(in_interval)))
+    # find an arrival
+    if scheduled_stop.arrival_timestamp:
+        # print ('\tit has an arrival timestamp (from the DB I guess)')
+        if not interval_stops:
+            # print('\tstarting interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
+            return make_trip_intervals(remaining_stops, [scheduled_stop], intervals_accu)
+        else: # we are in an interval already
+            print('\tending interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
+            interval_stops.append(scheduled_stop)
+            print('\tso the final interval_stops is {a}'.format(a=list(map(lambda s: s.stop_name,interval_stops))))
+            # dict_insert[interval_stops[0].stop_id]=interval_stops
+            intervals_accu[interval_stops[0].stop_id] = interval_stops # create a dict entry with k of first stop_id, v of list of stop instances
+            # reinit
+            return make_trip_intervals(remaining_stops, [], intervals_accu)
+    elif scheduled_stop.arrival_timestamp is None:
+        if not interval_stops:
+            return make_trip_intervals(remaining_stops, [], intervals_accu)
+        else: # we are in an interval
+            print('\t\tno timestamp for stop {a}'.format(a=scheduled_stop.stop_name))
+            interval_stops.append(scheduled_stop)
+            return make_trip_intervals(remaining_stops, interval_stops, intervals_accu)
+    else:
+        print ('****************** This one fell through the gap {a}'.format(a=scheduled_stop))
+        return make_trip_intervals(remaining_stops, interval_stops, intervals_accu)
+
 class RouteScan:
 
     def __init__(self, system_map):
@@ -307,47 +339,12 @@ class RouteScan:
                     print('\t\tdoesnt have any missed stops')
                     continue # back to loop start
 
-                # MAIN SCAN LOOP
-
-                # initialize
-                in_interval=False
-                all_this_trips_intervals = {}
-                # dict_insert ={}
-
-                # go through the scheduled_stops
-                for scheduled_stop in trip_card:
-                    # print('\tconsidering stop {a} with in_interval {b}...'.format(a=scheduled_stop.stop_name,b=str(in_interval)))
-                    # find an arrival
-                    if scheduled_stop.arrival_timestamp:
-                        # print ('\tit has an arrival timestamp (from the DB I guess)')
-                        if in_interval == False:
-                            # print('\tstarting interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
-                            interval_stops = []
-                            interval_stops.append(scheduled_stop) # these should be pointers to the object, not copies
-                            # print('\tso interval_stops is now {a}'.format(a=list(map(lambda s: s.stop_name,interval_stops))))
-                            in_interval = True
-                            continue
-                        elif in_interval == True:
-                            # print('\tending interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
-                            interval_stops.append(scheduled_stop)
-                            # print('\tso the final interval_stops is {a}'.format(a=list(map(lambda s: s.stop_name,interval_stops))))
-                            # dict_insert[interval_stops[0].stop_id]=interval_stops
-                            all_this_trips_intervals[interval_stops[0].stop_id] = interval_stops # create a dict entry with k of first stop_id, v of list of stop instances
-                            # reinit
-                            interval_stops = []
-                            in_interval = False
-                            # dict_insert={}
-                            continue
-                    elif scheduled_stop.arrival_timestamp is None:
-                        if in_interval == False:
-                            continue
-                        elif in_interval == True:
-                            print('\t\tno timestamp for stop {a}'.format(a=scheduled_stop.stop_name))
-                            interval_stops.append(scheduled_stop)
-                            continue
-                    else:
-                        print ('****************** This one fell through the gap {a}'.format(a=scheduled_stop))
-                        continue
+                # a dict of stop_id -> [ScheduledStop] representing all the
+                # stops we have to associate with a single BusPosition
+                # timestamp. For example if we have timestamps when the bus was
+                # at A & D, we know it passed B & C in the interim, so we
+                # associate the scheduled stops at A, B, & C with A.
+                all_this_trips_intervals = make_trip_intervals(trip_card, [], {})
 
                 # INTERPOLATION LOOP
 
@@ -376,7 +373,6 @@ class RouteScan:
         print ('****************** interpolation done ******************')
 
     # future option 2 to speedup, filter by collections routes only?
-
     def get_current_trips(self):
         # get a list of trips current running the route
         v_on_route = NJTransitAPI.parse_xml_getBusesForRoute(
