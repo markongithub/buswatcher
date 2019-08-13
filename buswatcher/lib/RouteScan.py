@@ -12,7 +12,7 @@ from shapely.geometry import Point
 
 from .DataBases import SQLAlchemyDBConnection, Trip, BusPosition, ScheduledStop
 from . import NJTransitAPI
-from .CommonTools import timeit
+from .CommonTools import make_trip_id, timeit
 # from .TransitSystem import load_system_map
 
 def format_scheduled_stop(s):
@@ -88,7 +88,7 @@ class RouteScan:
 
             # PARSE trips, create missing trip records first, to honor foreign key constraints
             for bus in self.buses:
-                bus.trip_id = ('{id}_{run}_{dt}').format(id=bus.id, run=bus.run, dt=datetime.datetime.today().strftime('%Y%m%d'))  # todo add route to trip id, so its rt_v_run_date?
+                bus.trip_id = make_trip_id(bus)
                 if not system_map.route_in_route_descriptions(bus.rt):
                     continue
                 self.trip_list.append(bus.trip_id)
@@ -97,7 +97,7 @@ class RouteScan:
                 try:
                     if result is None:
                         print("Creating a new Trip entry for vehicle {vehicle} on run #{run}".format(vehicle=bus.id, run=bus.run))
-                        trip_id = Trip('centro', system_map, bus.rt, bus.id, bus.run, bus.pd, bus.pid)
+                        trip_id = Trip('centro', system_map, bus.rt, bus.id, bus.run, bus.pd, bus.pid, make_trip_id(bus))
                         db.session.add(trip_id)
                     else:
                         continue
@@ -381,7 +381,7 @@ class RouteScan:
         trip_list_trip_id_only = list()
 
         for v in v_on_route:
-            trip_id = ('{a}_{b}_{c}').format(a=v.id, b=v.run, c=todays_date)
+            trip_id = make_trip_id(v)
             trip_list.append((trip_id, v.pd, v.bid, v.run))
             trip_list_trip_id_only.append(trip_id)
 
@@ -412,8 +412,7 @@ def turn_row_into_BusPosition(row):
     position.wid1 = row.wid1
     position.wid2 = row.wid2
 
-    position.trip_id = ('{id}_{run}_{dt}').format(id=row.id, run=row.run,
-                                                  dt=datetime.datetime.today().strftime('%Y%m%d'))
+    position.trip_id = make_trip_id(row)
     position.arrival_flag = False
     position.distance_to_stop = row.distance
     position.stop_id = row.stop_id

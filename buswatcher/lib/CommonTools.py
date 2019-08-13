@@ -1,6 +1,6 @@
 # future what other repeated pieces of code can get moved here?
 
-import time
+import datetime, time
 import os
 
 def timeit(f):
@@ -38,3 +38,7 @@ def get_config_path():
     path = (prefix + "config/")
 
     return path
+
+def make_trip_id(obj):
+    todays_date = datetime.datetime.today().strftime('%Y%m%d')
+    return ('{id}_{run}_{dt}').format(id=obj.id, run=obj.run, dt=todays_date)

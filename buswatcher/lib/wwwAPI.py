@@ -9,6 +9,7 @@ from sqlalchemy import func, text
 
 from . import NJTransitAPI
 from .DataBases import SQLAlchemyDBConnection, Trip, BusPosition, ScheduledStop
+from .CommonTools import make_trip_id
 
 
 class GenericReport: # all Report classes inherit query_factory
@@ -88,7 +89,7 @@ class RouteReport(GenericReport):
         trip_list_trip_id_only = list()
 
         for v in v_on_route:
-            trip_id = ('{a}_{b}_{c}').format(a=v.id, b=v.run, c=todays_date)
+            trip_id = make_trip_id(v)
             trip_list.append((trip_id, v.pd, v.bid, v.run))
             trip_list_trip_id_only.append(trip_id)
 
@@ -333,7 +334,7 @@ class TripReport(GenericReport):
                 NJTransitAPI.get_xml_data(self.source, 'buses_for_route', route=self.route))
             # pluck ours out
             for v in v_on_route:
-                trip_id = ('{a}_{b}_{c}').format(a=v.id, b=v.run, c=todays_date)
+                trip_id = make_trip_id(v)
                 if trip_id == self.trip_id:
                     trip_metadata = {'pd':v.pd,'id':v.id,'run':v.run}
 
