@@ -32,9 +32,9 @@ def make_trip_intervals(scheduled_stops, interval_stops, intervals_accu):
             # print('\tstarting interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
             return make_trip_intervals(remaining_stops, [scheduled_stop], intervals_accu)
         else: # we are in an interval already
-            print('\tending interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
+            # print('\tending interval at stop {a}\t{b}'.format(a=scheduled_stop.stop_name,b=scheduled_stop.arrival_timestamp))
             interval_stops.append(scheduled_stop)
-            print('\tso the final interval_stops is {a}'.format(a=list(map(lambda s: s.stop_name,interval_stops))))
+            # print('\tso the final interval_stops is {a}'.format(a=list(map(lambda s: s.stop_name,interval_stops))))
             # dict_insert[interval_stops[0].stop_id]=interval_stops
             intervals_accu[interval_stops[0].stop_id] = interval_stops # create a dict entry with k of first stop_id, v of list of stop instances
             # reinit
@@ -43,7 +43,6 @@ def make_trip_intervals(scheduled_stops, interval_stops, intervals_accu):
         if not interval_stops:
             return make_trip_intervals(remaining_stops, [], intervals_accu)
         else: # we are in an interval
-            print('\t\tno timestamp for stop {a}'.format(a=scheduled_stop.stop_name))
             interval_stops.append(scheduled_stop)
             return make_trip_intervals(remaining_stops, interval_stops, intervals_accu)
     else:
@@ -168,7 +167,7 @@ class RouteScan:
                     .order_by(BusPosition.timestamp.asc())
 
                 arrival_candidates = query.all()
-                print('arrival candidates: {a}'.format(a=list(map(lambda r: r.ScheduledStop.stop_name, arrival_candidates))))
+                # print('arrival candidates: {a}'.format(a=list(map(lambda r: r.ScheduledStop.stop_name, arrival_candidates))))
                 # split them into groups by stop
                 position_groups = [list(map(lambda r: r.BusPosition, g)) for key, g in itertools.groupby(arrival_candidates, lambda x: x.BusPosition.stop_id)]
 
@@ -298,6 +297,7 @@ class RouteScan:
                     # to do 2 debug approach assignment: 3+ position seems to still be having problems...
                     try:
                         stop_to_update[0][0].arrival_timestamp = arrival_time
+                        print('\t\tarrival_timestamp added to ScheduledStop instance for trip {trip_id}\tstop {a}\t{b}'.format(trip_id=trip_id,a=stop_to_update[0][0].stop_name, b=arrival_time))
                     except:
                         pass
 
@@ -314,7 +314,6 @@ class RouteScan:
         # grab a trip
         for trip_id in self.trip_list:
 
-            print ('considering trip ID #{a}...'.format(a=trip_id))
             with self.db as db:
                 trip_card = db.session.query(ScheduledStop) \
                     .join(Trip) \
@@ -365,7 +364,7 @@ class RouteScan:
                         interval_sequence[x].arrival_timestamp = start_time + adder
                         interval_sequence[x].interpolated_arrival_flag = True
                         n += 1
-                        print('\t\tarrival_timestamp added to ScheduledStop instance for stop {a}\t{b}\tincrement {c}'.format(a=interval_sequence[x].stop_name, b=interval_sequence[x].arrival_timestamp, c=adder))
+                        print('\t\tarrival_timestamp added to ScheduledStop instance for trip {trip_id}\tstop {a}\t{b}\tincrement {c}'.format(trip_id=trip_id,a=interval_sequence[x].stop_name, b=interval_sequence[x].arrival_timestamp, c=adder))
 
                 # when we are done with this trip, write to the db
                 db.session.commit()
