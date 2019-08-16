@@ -41,4 +41,4 @@ def get_config_path():
 
 def make_trip_id(obj):
     todays_date = datetime.datetime.today().strftime('%Y%m%d')
-    return ('{id}_{run}_{dt}').format(id=obj.id, run=obj.run, dt=todays_date)
+    return ('{id}_{run}_{pid}_{dt}').format(id=obj.id, run=obj.run, pid=obj.pid, dt=todays_date)

@@ -167,7 +167,7 @@ class RouteScan:
                     .order_by(BusPosition.timestamp.asc())
 
                 arrival_candidates = query.all()
-                # print('arrival candidates: {a}'.format(a=list(map(lambda r: r.ScheduledStop.stop_name, arrival_candidates))))
+                print('arrival candidates: {a}'.format(a=list(map(lambda r: (r.ScheduledStop.stop_name, r.BusPosition.timestamp), arrival_candidates))))
                 # split them into groups by stop
                 position_groups = [list(map(lambda r: r.BusPosition, g)) for key, g in itertools.groupby(arrival_candidates, lambda x: x.BusPosition.stop_id)]
 
@@ -329,13 +329,13 @@ class RouteScan:
 
                 # deal with common situations to skip the CPU intensive stuff
                 if num_arrivals == 0:
-                    print('\t\tdoesnt have any arrivals logged yet')
+                    # print('\t\tdoesnt have any arrivals logged yet')
                     continue # back to loop start
                 elif num_arrivals == 1:
-                    print('\t\thas 1 arrival, so no intervals yet to interpolate')
+                    # print('\t\thas 1 arrival, so no intervals yet to interpolate')
                     continue # back to loop start
                 elif num_arrivals == len (trip_card):
-                    print('\t\tdoesnt have any missed stops')
+                    # print('\t\tdoesnt have any missed stops')
                     continue # back to loop start
 
                 # a dict of stop_id -> [ScheduledStop] representing all the
