@@ -65,10 +65,18 @@ class SystemMap:
           'coordinate_bundle': self.get_single_route_Paths(route)[1]
         }
 
+    def available_path_ids(self, route):
+        path_ids = set()
+        for direction in self.get_single_route_Paths(route)[0]:
+            for path in direction.paths:
+                path_ids.add(path.id)
+        return path_ids
+
     def update_single_route_geometry(self, route):
         new_geometry = self.get_single_route_geometry(
                 route, force_download=True)
         self.route_geometries[route]=new_geometry
+        print('paths available now: {paths}'.format(paths=self.available_path_ids(route)))
 
     def get_routelist(self):
         routelist = (list(set(r['route'] for r in self.route_descriptions['routedata'])))
@@ -112,7 +120,7 @@ class SystemMap:
         return (route in self.route_geometries)
 
     def get_single_route_paths_and_coordinatebundle(self, route, path_id=None):
-        if path_id and path_id not in self.route_geometries[route]['paths']:
+        if path_id and path_id not in self.available_path_ids(route):
             self.update_single_route_geometry(route)
         routes = self.route_geometries[route]['paths']
         coordinates_bundle = self.route_geometries[route]['coordinate_bundle']
