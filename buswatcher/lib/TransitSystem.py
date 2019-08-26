@@ -67,7 +67,7 @@ class SystemMap:
 
     def available_path_ids(self, route):
         path_ids = set()
-        for direction in self.get_single_route_Paths(route)[0]:
+        for direction in self.route_geometries[route]['paths']:
             for path in direction.paths:
                 path_ids.add(path.id)
         return path_ids
@@ -76,7 +76,7 @@ class SystemMap:
         new_geometry = self.get_single_route_geometry(
                 route, force_download=True)
         self.route_geometries[route]=new_geometry
-        print('paths available now: {paths}'.format(paths=self.available_path_ids(route)))
+        print('paths available after update: {paths}'.format(paths=self.available_path_ids(route)))
 
     def get_routelist(self):
         routelist = (list(set(r['route'] for r in self.route_descriptions['routedata'])))
@@ -120,15 +120,24 @@ class SystemMap:
         return (route in self.route_geometries)
 
     def get_single_route_paths_and_coordinatebundle(self, route, path_id=None):
+        print('paths available now: {paths} and we want {path_id}'.format(paths=self.available_path_ids(route), path_id=path_id))
         if path_id and path_id not in self.available_path_ids(route):
             self.update_single_route_geometry(route)
         routes = self.route_geometries[route]['paths']
         coordinates_bundle = self.route_geometries[route]['coordinate_bundle']
         return routes, coordinates_bundle
 
-    def get_single_route_stoplist_for_localizer(self, route):
+    def get_path_points(self, route, path_id):
+        routedata, coordinate_bundle = self.get_single_route_paths_and_coordinatebundle(route, path_id)
+        for rt in routedata:
+            for path in rt.paths:
+                if path.id == path_id:
+                  return path.points
+        return []
 
-        routedata, coordinate_bundle = self.get_single_route_paths_and_coordinatebundle(route)
+    def get_single_route_stoplist_for_localizer(self, route, path_id):
+
+        routedata, coordinate_bundle = self.get_single_route_paths_and_coordinatebundle(route, path_id)
         stoplist=[]
         for rt in routedata:
             for path in rt.paths:
