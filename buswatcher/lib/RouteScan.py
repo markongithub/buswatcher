@@ -173,137 +173,141 @@ class RouteScan:
 
                 # iterate over all but last one (which is stop bus is currently observed at)
                 for x in range(len(position_groups) - 1):
-
-                    # slice the positions for the xth stop
-                    position_list = position_groups[x]
-
                     # GRAB THE STOP RECORD FROM DB FOR UPDATING ARRIVAL INFO
+                    # I don't know why this has to be a join. Everything we need
+                    # is in ScheduledStop.
                     stop_to_update = db.session.query(ScheduledStop, BusPosition) \
                         .join(BusPosition) \
-                        .filter(ScheduledStop.trip_id == position_list[0].trip_id) \
-                        .filter(ScheduledStop.stop_id == position_list[0].stop_id) \
+                        .filter(ScheduledStop.trip_id == position_groups[x][0].trip_id) \
+                        .filter(ScheduledStop.stop_id == position_groups[x][0].stop_id) \
                         .all()
 
-                    ##############################################
-                    #   ONE POSITION
-                    #   if we only have one observation and since
-                    #   this isn't the current stop, then we've
-                    #   already passed it and can just assign it
-                    #   as the arrival
-                    ##############################################
-
-                    if len(position_list) == 1:
-                        arrival_time = position_list[0].timestamp
-                        position_list[0].arrival_flag = True
-                        case_identifier = '1a'
-                        approach_array = np.array([0, position_list[0].distance_to_stop])
-
-                    ##############################################
-                    #   TWO POSITIONS
-                    #   calculate the slope between the two points
-                    #   and assign to CASE A,B, or C
-                    #   arrival is either the 1st observed position
-                    #   or the 2nd
-                    ##############################################
-
-                    elif len(position_list) == 2:
-
-                        # create and display approach array
-                        points = []
-                        for y in range(len(position_list)):
-                            points.append((y, position_list[y].distance_to_stop))
-                        approach_array = np.array(points)
-
-                        # calculate classification metrics
-                        slope = np.diff(approach_array, axis=0)[:, 1]
-                        acceleration = np.diff(slope, axis=0)
-                        slope_avg = np.mean(slope, axis=0)
-
-                        # CASE A sitting at the stop, then gone without a trace
-                        # determined by [d is <100, doesn't change e.g. slope = 0 ]
-                        # (0, 50)  <-----
-                        # (1, 50)
-                        if slope_avg == 0:
-                            arrival_time = position_list[0].timestamp
-                            position_list[0].arrival_flag = True
-                            case_identifier = '2a'
-
-                        # CASE B approaches, then vanishes
-                        # determined by [d is decreasing, slope is always negative]
-                        # (0, 400)
-                        # (1, 300) <-----
-                        elif slope_avg < 0:
-                            arrival_time = position_list[-1].timestamp
-                            position_list[-1].arrival_flag = True
-                            case_identifier = '2b'
-
-                        # CASE C appears, then departs
-                        # determined by [d is increasing, slope is always positive]
-                        # (0, 50)  <-----
-                        # (1, 100)
-                        elif slope_avg > 0:
-                            arrival_time = position_list[0].timestamp
-                            position_list[0].arrival_flag = True
-                            case_identifier = '2c'
-
-                    ##############################################
-                    #   THREE OR MORE POSITIONS
-                    ##############################################
-
-                    elif len(position_list) > 2:
-
-                        # create and display approach array
-                        # print(('\tapproaching {b}').format(a=trip_id, b=position_list[0].stop_id))
-                        points = []
-                        for y in range(len(position_list)):
-                            points.append((y, position_list[y].distance_to_stop))
-                        approach_array = np.array(points)
-                        # for point in approach_array:
-                        # print(('\t\t {a:.0f} distance_to_stop {b}').format(a=point[0], b=point[1]))
-
-                        # calculate classification metrics
-                        slope = np.diff(approach_array, axis=0)[:, 1]
-                        acceleration = np.diff(slope, axis=0)
-                        slope_avg = np.mean(slope, axis=0)
-
-                        try:
-                            # CASE A
-                            if slope_avg == 0:
-                                arrival_time = position_list[0].timestamp
-                                position_list[0].arrival_flag = True
-                                case_identifier = '3a'
-                                # plot_approach(trip_id, np.array([0, position_list[0].distance_to_stop]), case_identifier)
-
-                            # CASE B
-                            elif slope_avg < 0:
-                                arrival_time = position_list[-1].timestamp
-                                position_list[-1].arrival_flag = True
-                                case_identifier = '3b'
-                                # plot_approach(trip_id, np.array([0, position_list[-1].distance_to_stop]), case_identifier)
-
-                            # CASE C
-                            elif slope_avg > 0:
-                                arrival_time = position_list[0].timestamp
-                                position_list[0].arrival_flag = True
-                                case_identifier = '3c'
-                                # plot_approach(trip_id, np.array([0, position_list[0].distance_to_stop]), case_identifier)
-
-                            # to do add 2 `Boomerang buses (Case D)`
-
-                        except:
-                            pass
-
-                    # catch errors for unassigned 3+-position approaches
-                    # to do 2 debug approach assignment: 3+ position seems to still be having problems...
-                    try:
-                        stop_to_update[0][0].arrival_timestamp = arrival_time
-                        print('\t\tarrival_timestamp added to ScheduledStop instance for trip {trip_id}\tstop {a}\t{b}'.format(trip_id=trip_id,a=stop_to_update[0][0].stop_name, b=arrival_time))
-                    except:
-                        pass
+                    arrival_time = self.arrival_time_for_position_group(position_groups[x])
+                    stop_to_update[0][0].arrival_timestamp = arrival_time
+                    print('\t\tarrival_timestamp added to ScheduledStop instance for trip {trip_id}\tstop {a}\t{b}'.format(trip_id=trip_id,a=stop_to_update[0][0].stop_name, b=arrival_time))
 
             db.session.commit()
 
             return
+
+    def arrival_time_for_position_group(self, position_list):
+
+        ##############################################
+        #   ONE POSITION
+        #   if we only have one observation and since
+        #   this isn't the current stop, then we've
+        #   already passed it and can just assign it
+        #   as the arrival
+        ##############################################
+
+        if len(position_list) == 1:
+            arrival_time = position_list[0].timestamp
+            position_list[0].arrival_flag = True
+            case_identifier = '1a'
+            approach_array = np.array([0, position_list[0].distance_to_stop])
+
+        ##############################################
+        #   TWO POSITIONS
+        #   calculate the slope between the two points
+        #   and assign to CASE A,B, or C
+        #   arrival is either the 1st observed position
+        #   or the 2nd
+        ##############################################
+
+        elif len(position_list) == 2:
+
+            # create and display approach array
+            points = []
+            for y in range(len(position_list)):
+                points.append((y, position_list[y].distance_to_stop))
+            approach_array = np.array(points)
+
+            # calculate classification metrics
+            slope = np.diff(approach_array, axis=0)[:, 1]
+            acceleration = np.diff(slope, axis=0)
+            slope_avg = np.mean(slope, axis=0)
+
+            # CASE A sitting at the stop, then gone without a trace
+            # determined by [d is <100, doesn't change e.g. slope = 0 ]
+            # (0, 50)  <-----
+            # (1, 50)
+            if slope_avg == 0:
+                arrival_time = position_list[0].timestamp
+                position_list[0].arrival_flag = True
+                case_identifier = '2a'
+
+            # CASE B approaches, then vanishes
+            # determined by [d is decreasing, slope is always negative]
+            # (0, 400)
+            # (1, 300) <-----
+            elif slope_avg < 0:
+                arrival_time = position_list[-1].timestamp
+                position_list[-1].arrival_flag = True
+                case_identifier = '2b'
+
+            # CASE C appears, then departs
+            # determined by [d is increasing, slope is always positive]
+            # (0, 50)  <-----
+            # (1, 100)
+            elif slope_avg > 0:
+                arrival_time = position_list[0].timestamp
+                position_list[0].arrival_flag = True
+                case_identifier = '2c'
+
+        ##############################################
+        #   THREE OR MORE POSITIONS
+        ##############################################
+
+        elif len(position_list) > 2:
+
+            # create and display approach array
+            # print(('\tapproaching {b}').format(a=trip_id, b=position_list[0].stop_id))
+            points = []
+            for y in range(len(position_list)):
+                points.append((y, position_list[y].distance_to_stop))
+            approach_array = np.array(points)
+            # for point in approach_array:
+            # print(('\t\t {a:.0f} distance_to_stop {b}').format(a=point[0], b=point[1]))
+
+            # calculate classification metrics
+            slope = np.diff(approach_array, axis=0)[:, 1]
+            acceleration = np.diff(slope, axis=0)
+            slope_avg = np.mean(slope, axis=0)
+
+            try:
+                # CASE A
+                if slope_avg == 0:
+                    arrival_time = position_list[0].timestamp
+                    position_list[0].arrival_flag = True
+                    case_identifier = '3a'
+                    # plot_approach(trip_id, np.array([0, position_list[0].distance_to_stop]), case_identifier)
+
+                # CASE B
+                elif slope_avg < 0:
+                    arrival_time = position_list[-1].timestamp
+                    position_list[-1].arrival_flag = True
+                    case_identifier = '3b'
+                    # plot_approach(trip_id, np.array([0, position_list[-1].distance_to_stop]), case_identifier)
+
+                # CASE C
+                elif slope_avg > 0:
+                    arrival_time = position_list[0].timestamp
+                    position_list[0].arrival_flag = True
+                    case_identifier = '3c'
+                    # plot_approach(trip_id, np.array([0, position_list[0].distance_to_stop]), case_identifier)
+
+                # to do add 2 `Boomerang buses (Case D)`
+
+            except:
+                pass
+
+        # catch errors for unassigned 3+-position approaches
+        # to do 2 debug approach assignment: 3+ position seems to still be having problems...
+        try:
+            return arrival_time
+        except:
+            print('Why is arrival_time unassigned?!')
+            pass
 
     @timeit
     def interpolate_missed_stops(self):
@@ -485,7 +489,7 @@ def get_nearest_stop(system_map, buses, route):
         return bus_positions
 
     try:
-        stoplist = system_map.get_single_route_stoplist_for_localizer(route)
+        stoplist = system_map.get_single_route_stoplist_for_localizer(route, None)
     except:
         # future automatically add unknown routes to route_descriptions.json
         # print("couldn't find route in route_descriptions.json, please add it. route " + str(route))
@@ -528,6 +532,7 @@ def get_nearest_stop(system_map, buses, route):
 
                 # call localizer
                 inferred_stops = ckdnearest(gdf1, gdf2, 'stop_id')
+                print('ckdnearest returns {s}'.format(s=inferred_stops))
 
                 gdf1['stop_id'] = inferred_stops['stop_id']
                 gdf1['distance'] = inferred_stops['distance']
