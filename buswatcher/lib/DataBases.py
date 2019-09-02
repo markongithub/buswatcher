@@ -44,7 +44,7 @@ class Trip(Base):
     # CLASS Trip
     #####################################################
 
-    def __init__(self, source, system_map, route, v, run, pd, pid, trip_id):
+    def __init__(self, source, system_map, route, v, run, pd, pid, fs, trip_id):
         self.source = source
         self.rt = route
         self.v = v
@@ -52,6 +52,7 @@ class Trip(Base):
         self.pd = pd
         self.pid = pid
         self.date = datetime.datetime.today().strftime('%Y%m%d')
+        self.fs = fs
         self.trip_id=trip_id
 
         # create a corresponding set of ScheduledStop records for each new Trip
@@ -87,6 +88,7 @@ class Trip(Base):
     pd = Column(String(127))
     pid = Column(Integer())
     date = Column(Date())
+    fs = Column(String(127))
     coordinate_bundle = Column(Text())
 
     # relationships
